@@ -1,8 +1,12 @@
 package main
 
 import (
+	"image"
+	_ "image/png"
 	"image/color"
 	"log"
+	"os"
+	"math"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
@@ -21,8 +25,18 @@ const (
 )
 
 var (
-	arcadeFont	font.Face
+	arcadeFont     font.Face
+	gorillaImage   *ebiten.Image
 )
+
+func init(){
+	file, _ := os.Open("image/gorilla.png")
+	img, _, err := image.Decode(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	gorillaImage = ebiten.NewImageFromImage(img)
+}
 
 func init() {
 	tt, err := opentype.Parse(fonts.PressStart2P_ttf)
@@ -50,6 +64,15 @@ const (
 
 type Game struct{
 	mode Mode
+
+	gorilla_x int
+	gorilla_y int
+	gorilla_vy int
+
+	cameraX int
+	cameraY int
+
+
 }
 
 func NewGame() *Game {
@@ -92,8 +115,10 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		texts = []string{"FLAPPY GORILLA", "", "", "", "CLICK MOUSE BUTTON"}
 		drawText(screen, texts)
 	case ModeGame:
+		g.drawGorilla(screen)
 		ebitenutil.DebugPrint(screen, "ModeGame")
 	case ModeGameOver:
+		g.drawGorilla(screen)
 		ebitenutil.DebugPrint(screen, "ModeGameOver")
 		texts = []string{"", "", "", "GAME OVER"}
 		drawText(screen, texts)
@@ -104,6 +129,18 @@ func (g *Game) Draw(screen *ebiten.Image) {
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
     return screenWidth, screenHeight
+}
+
+
+func (g *Game) drawGorilla(screen *ebiten.Image) {
+	op := &ebiten.DrawImageOptions{}
+	w, h := gorillaImage.Size()
+	op.GeoM.Translate(-float64(w)/2.0, -float64(h)/2.0)
+	op.GeoM.Rotate(float64(g.gorilla_vy) / 96.0 * math.Pi / 6)
+	op.GeoM.Translate(float64(w)/2.0, float64(h)/2.0)
+	op.GeoM.Translate(float64(g.gorilla_x/16.0)-float64(g.cameraX), float64(g.gorilla_y/16.0)-float64(g.cameraY))
+	op.Filter = ebiten.FilterLinear
+	screen.DrawImage(gorillaImage, op)
 }
 
 func main() {
