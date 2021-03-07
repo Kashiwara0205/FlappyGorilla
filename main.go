@@ -82,6 +82,8 @@ func drawText(screen *ebiten.Image, texts []string){
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	screen.Fill(color.RGBA{0x80, 0xa0, 0xc0, 0xff})
+	
 	var texts []string
 
 	switch g.mode{
