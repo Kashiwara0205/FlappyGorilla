@@ -17,7 +17,7 @@ import (
 const (
 	screenWidth = 640
 	screenHeight = 480
-	fontSize = 30
+	fontSize = 32
 )
 
 var (
@@ -74,23 +74,34 @@ func (g *Game) Update() error {
     return nil
 }
 
+func drawText(screen *ebiten.Image, texts []string){
+	for i, l := range texts {
+		x := (screenWidth - len(l)*fontSize) / 2
+		text.Draw(screen, l, arcadeFont, x, (i+4)*fontSize, color.White)
+	}
+}
+
 func (g *Game) Draw(screen *ebiten.Image) {
+	var texts []string
+
 	switch g.mode{
 	case ModeTitle:
 		ebitenutil.DebugPrint(screen, "ModeTitle")
+		texts = []string{"FLAPPY GORIRA", "", "", "", "CLICK MOUSE BUTTON"}
+		drawText(screen, texts)
 	case ModeGame:
 		ebitenutil.DebugPrint(screen, "ModeGame")
 	case ModeGameOver:
 		ebitenutil.DebugPrint(screen, "ModeGameOver")
+		texts = []string{"", "", "", "GAME OVER"}
+		drawText(screen, texts)
+
 	}
-
-
-	text.Draw(screen, "DrawText", arcadeFont, 50, 50, color.White)
  
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
-    return 320, 240
+    return screenWidth, screenHeight
 }
 
 func main() {
