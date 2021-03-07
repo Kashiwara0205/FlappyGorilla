@@ -1,4 +1,4 @@
-module flappyGorira
+module flappyGorilla
 
 go 1.13
 

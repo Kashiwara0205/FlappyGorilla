@@ -83,13 +83,13 @@ func drawText(screen *ebiten.Image, texts []string){
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{0x80, 0xa0, 0xc0, 0xff})
-	
+
 	var texts []string
 
 	switch g.mode{
 	case ModeTitle:
 		ebitenutil.DebugPrint(screen, "ModeTitle")
-		texts = []string{"FLAPPY GORIRA", "", "", "", "CLICK MOUSE BUTTON"}
+		texts = []string{"FLAPPY GORILLA", "", "", "", "CLICK MOUSE BUTTON"}
 		drawText(screen, texts)
 	case ModeGame:
 		ebitenutil.DebugPrint(screen, "ModeGame")
@@ -108,7 +108,7 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 func main() {
     ebiten.SetWindowSize(screenWidth, screenHeight)
-    ebiten.SetWindowTitle("FlappyGorira")
+    ebiten.SetWindowTitle("FlappyGORILLA")
     if err := ebiten.RunGame(NewGame()); err != nil {
         log.Fatal(err)
     }
