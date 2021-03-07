@@ -89,7 +89,18 @@ func (g *Game) Update() error {
 	case ModeTitle:
 		if clickMouseButton(){ g.mode = ModeGame }
 	case ModeGame:
-		if clickMouseButton(){ g.mode = ModeGameOver }
+		g.gorilla_x += 32
+		g.cameraX += 2
+		if clickMouseButton(){
+			g.gorilla_vy = -96
+		}
+		g.gorilla_y += g.gorilla_vy
+
+		g.gorilla_vy += 4
+		if g.gorilla_vy > 96 {
+			g.gorilla_vy = 96
+		}
+
 	case ModeGameOver:
 		if clickMouseButton(){ g.mode = ModeTitle }	
 	}
