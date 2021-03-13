@@ -22,6 +22,7 @@ const (
 	screenWidth = 640
 	screenHeight = 480
 	fontSize = 32
+	tileSize = 32
 )
 
 var (
@@ -54,6 +55,14 @@ func init() {
 	}
 }
 
+func (g *Game) init() {
+	g.gorillaX = 0
+	g.gorillaY = 100 * 16
+	g.cameraX = -240
+	g.cameraY = 0
+}
+
+
 type Mode int
 
 const (
@@ -65,9 +74,9 @@ const (
 type Game struct{
 	mode Mode
 
-	gorilla_x int
-	gorilla_y int
-	gorilla_vy int
+	gorillaX int
+	gorillaY int
+	gorillaVy int
 
 	cameraX int
 	cameraY int
@@ -77,6 +86,7 @@ type Game struct{
 
 func NewGame() *Game {
 	g := &Game{}
+	g.init()
 	return g
 }
 
@@ -89,20 +99,27 @@ func (g *Game) Update() error {
 	case ModeTitle:
 		if clickMouseButton(){ g.mode = ModeGame }
 	case ModeGame:
-		g.gorilla_x += 32
+		g.gorillaX += 32
 		g.cameraX += 2
 		if clickMouseButton(){
-			g.gorilla_vy = -96
+			g.gorillaVy = -96
 		}
-		g.gorilla_y += g.gorilla_vy
+		g.gorillaY += g.gorillaVy
 
-		g.gorilla_vy += 4
-		if g.gorilla_vy > 96 {
-			g.gorilla_vy = 96
+		g.gorillaVy += 4
+		if g.gorillaVy > 96 {
+			g.gorillaVy = 96
+		}
+
+		if g.hit(){
+			g.mode = ModeGameOver
 		}
 
 	case ModeGameOver:
-		if clickMouseButton(){ g.mode = ModeTitle }	
+		if clickMouseButton(){ 
+			g.init()
+			g.mode = ModeTitle 
+		}
 	}
 
     return nil
@@ -138,18 +155,40 @@ func (g *Game) Draw(screen *ebiten.Image) {
  
 }
 
+func (g *Game) hit() bool{	
+	const (
+		gorillaWidth  = 30
+		gorillaHeight = 65
+	)
+	
+	_, h := gorillaImage.Size()
+
+	y0 := (g.gorillaY / 16) + (h - gorillaHeight) / 2
+
+	y1 := y0 + gorillaHeight
+
+	if y0 < -tileSize * 4{
+		return true
+	}
+
+	if y1 >= screenHeight-tileSize {
+		return true
+	}
+
+	return false
+}
+
 func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
     return screenWidth, screenHeight
 }
-
 
 func (g *Game) drawGorilla(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
 	w, h := gorillaImage.Size()
 	op.GeoM.Translate(-float64(w)/2.0, -float64(h)/2.0)
-	op.GeoM.Rotate(float64(g.gorilla_vy) / 96.0 * math.Pi / 6)
+	op.GeoM.Rotate(float64(g.gorillaVy) / 96.0 * math.Pi / 6)
 	op.GeoM.Translate(float64(w)/2.0, float64(h)/2.0)
-	op.GeoM.Translate(float64(g.gorilla_x/16.0)-float64(g.cameraX), float64(g.gorilla_y/16.0)-float64(g.cameraY))
+	op.GeoM.Translate(float64(g.gorillaX/16.0)-float64(g.cameraX), float64(g.gorillaY/16.0)-float64(g.cameraY))
 	op.Filter = ebiten.FilterLinear
 	screen.DrawImage(gorillaImage, op)
 }
