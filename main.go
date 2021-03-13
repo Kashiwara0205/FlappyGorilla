@@ -206,7 +206,7 @@ func (g *Game) hit() bool{
 		gorillaHeight = 65
 	)
 	
-	_, h := gorillaImage.Size()
+	w, h := gorillaImage.Size()
 
 	y0 := floorDiv(g.gorillaY, 16) + (h - gorillaHeight) / 2
 	y1 := y0 + gorillaHeight
@@ -219,6 +219,30 @@ func (g *Game) hit() bool{
 		return true
 	}
 
+	x0 := floorDiv(g.gorillaX, 16) + (w-gorillaWidth)/2
+	x1 := x0 + gorillaWidth
+
+	xMin := floorDiv(x0-pipeWidth, tileSize)
+	xMax := floorDiv(x0+gorillaWidth, tileSize)
+	for x := xMin; x <= xMax; x++ {
+		y, ok := g.pipeAt(x)
+		if !ok {
+			continue
+		}
+		if x0 >= x*tileSize+pipeWidth {
+			continue
+		}
+		if x1 < x*tileSize {
+			continue
+		}
+		if y0 < y*tileSize {
+			return true
+		}
+		if y1 >= (y+pipeGapY)*tileSize {
+			return true
+		}
+	}
+	
 	return false
 }
 
