@@ -7,6 +7,8 @@ import (
 	"log"
 	"os"
 	"math"
+	"math/rand"
+	"time"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
@@ -19,16 +21,25 @@ import (
 )
 
 const (
-	screenWidth = 640
-	screenHeight = 480
-	fontSize = 32
-	tileSize = 32
+	screenWidth      = 640
+	screenHeight     = 480
+	fontSize         = 32
+	tileSize         = 32
+	pipeWidth        = tileSize * 2
+	pipeStartOffsetX = 8
+	pipeIntervalX    = 8
+	pipeGapY         = 5
 )
 
 var (
 	arcadeFont     font.Face
 	gorillaImage   *ebiten.Image
+	tilesImage     *ebiten.Image
 )
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 func init(){
 	file, _ := os.Open("image/gorilla.png")
@@ -37,6 +48,13 @@ func init(){
 		log.Fatal(err)
 	}
 	gorillaImage = ebiten.NewImageFromImage(img)
+
+	file, _ = os.Open("image/tiles.png")
+	img, _, err = image.Decode(file)
+	if err != nil {
+		log.Fatal(err)
+	}
+	tilesImage = ebiten.NewImageFromImage(img)
 }
 
 func init() {
@@ -55,14 +73,17 @@ func init() {
 	}
 }
 
-func (g *Game) init() {
-	g.gorillaX = 0
-	g.gorillaY = 100 * 16
-	g.cameraX = -240
-	g.cameraY = 0
+func floorDiv(x, y int) int {
+	d := x / y
+	if d*y == x || x >= 0 {
+		return d
+	}
+	return d - 1
 }
 
-
+func floorMod(x, y int) int {
+	return x - floorDiv(x, y)*y
+}
 type Mode int
 
 const (
@@ -81,13 +102,26 @@ type Game struct{
 	cameraX int
 	cameraY int
 
-
+	pipeTileYs []int
 }
+
+
 
 func NewGame() *Game {
 	g := &Game{}
 	g.init()
 	return g
+}
+
+func (g *Game) init() {
+	g.gorillaX = 0
+	g.gorillaY = 100 * 16
+	g.cameraX = -240
+	g.cameraY = 0
+	g.pipeTileYs = make([]int, 256)
+	for i := range g.pipeTileYs {
+		g.pipeTileYs[i] = rand.Intn(6) + 2
+	}
 }
 
 func clickMouseButton() bool {
@@ -134,6 +168,7 @@ func drawText(screen *ebiten.Image, texts []string){
 
 func (g *Game) Draw(screen *ebiten.Image) {
 	screen.Fill(color.RGBA{0x80, 0xa0, 0xc0, 0xff})
+	g.drawTiles(screen)
 
 	var texts []string
 
@@ -150,10 +185,20 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		ebitenutil.DebugPrint(screen, "ModeGameOver")
 		texts = []string{"", "", "", "GAME OVER"}
 		drawText(screen, texts)
-
 	}
- 
 }
+
+func (g *Game) pipeAt(tileX int) (tileY int, ok bool) {
+	if (tileX - pipeStartOffsetX) <= 0 {
+		return 0, false
+	}
+	if floorMod(tileX-pipeStartOffsetX, pipeIntervalX) != 0 {
+		return 0, false
+	}
+	idx := floorDiv(tileX-pipeStartOffsetX, pipeIntervalX)
+	return g.pipeTileYs[idx%len(g.pipeTileYs)], true
+}
+
 
 func (g *Game) hit() bool{	
 	const (
@@ -163,8 +208,7 @@ func (g *Game) hit() bool{
 	
 	_, h := gorillaImage.Size()
 
-	y0 := (g.gorillaY / 16) + (h - gorillaHeight) / 2
-
+	y0 := floorDiv(g.gorillaY, 16) + (h - gorillaHeight) / 2
 	y1 := y0 + gorillaHeight
 
 	if y0 < -tileSize * 3{
@@ -191,6 +235,54 @@ func (g *Game) drawGorilla(screen *ebiten.Image) {
 	op.GeoM.Translate(float64(g.gorillaX/16.0)-float64(g.cameraX), float64(g.gorillaY/16.0)-float64(g.cameraY))
 	op.Filter = ebiten.FilterLinear
 	screen.DrawImage(gorillaImage, op)
+}
+
+func (g *Game) drawTiles(screen *ebiten.Image) {
+	const (
+		nx           = screenWidth / tileSize
+		ny           = screenHeight / tileSize
+		pipeTileSrcX = 128
+		pipeTileSrcY = 192
+	)
+
+	op := &ebiten.DrawImageOptions{}
+	for i := -2; i < nx+1; i++ {
+		// ground
+		op.GeoM.Reset()
+		op.GeoM.Translate(float64(i*tileSize-floorMod(g.cameraX, tileSize)),
+			float64((ny-1)*tileSize-floorMod(g.cameraY, tileSize)))
+		screen.DrawImage(tilesImage.SubImage(image.Rect(0, 0, tileSize, tileSize)).(*ebiten.Image), op)
+
+		// pipe
+		if tileY, ok := g.pipeAt(floorDiv(g.cameraX, tileSize) + i); ok {
+			for j := 0; j < tileY; j++ {
+				op.GeoM.Reset()
+				op.GeoM.Scale(1, -1)
+				op.GeoM.Translate(float64(i*tileSize-floorMod(g.cameraX, tileSize)),
+					float64(j*tileSize-floorMod(g.cameraY, tileSize)))
+				op.GeoM.Translate(0, tileSize)
+				var r image.Rectangle
+				if j == tileY-1 {
+					r = image.Rect(pipeTileSrcX, pipeTileSrcY, pipeTileSrcX+tileSize*2, pipeTileSrcY+tileSize)
+				} else {
+					r = image.Rect(pipeTileSrcX, pipeTileSrcY+tileSize, pipeTileSrcX+tileSize*2, pipeTileSrcY+tileSize*2)
+				}
+				screen.DrawImage(tilesImage.SubImage(r).(*ebiten.Image), op)
+			}
+			for j := tileY + pipeGapY; j < screenHeight/tileSize-1; j++ {
+				op.GeoM.Reset()
+				op.GeoM.Translate(float64(i*tileSize-floorMod(g.cameraX, tileSize)),
+					float64(j*tileSize-floorMod(g.cameraY, tileSize)))
+				var r image.Rectangle
+				if j == tileY+pipeGapY {
+					r = image.Rect(pipeTileSrcX, pipeTileSrcY, pipeTileSrcX+pipeWidth, pipeTileSrcY+tileSize)
+				} else {
+					r = image.Rect(pipeTileSrcX, pipeTileSrcY+tileSize, pipeTileSrcX+pipeWidth, pipeTileSrcY+tileSize+tileSize)
+				}
+				screen.DrawImage(tilesImage.SubImage(r).(*ebiten.Image), op)
+			}
+		}
+	}
 }
 
 func main() {
