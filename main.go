@@ -7,8 +7,6 @@ import (
 	"log"
 	"os"
 	"math"
-	"math/rand"
-	"time"
 	"fmt"
 
 	"golang.org/x/image/font"
@@ -37,10 +35,6 @@ var (
 	gorillaImage   *ebiten.Image
 	tilesImage     *ebiten.Image
 )
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-}
 
 func init(){
 	file, _ := os.Open("image/gorilla.png")
@@ -106,7 +100,13 @@ type Game struct{
 	pipeTileYs []int
 }
 
+func getRotateValue(values []int, i int) int{
+	length := len(values)
+	x := (length + i) / length
+	idx := length + i - length * x 
 
+	return values[idx]
+}
 
 func NewGame() *Game {
 	g := &Game{}
@@ -120,8 +120,10 @@ func (g *Game) init() {
 	g.cameraX = -240
 	g.cameraY = 0
 	g.pipeTileYs = make([]int, 256)
+
+	values := []int{2, 3, 4, 3, 5, 7, 2, 3, 4, 5}
 	for i := range g.pipeTileYs {
-		g.pipeTileYs[i] = rand.Intn(6) + 2
+		g.pipeTileYs[i] = getRotateValue(values, i)
 	}
 }
 
