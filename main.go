@@ -167,7 +167,7 @@ func (g *Game) hit() bool{
 
 	y1 := y0 + gorillaHeight
 
-	if y0 < -tileSize * 4{
+	if y0 < -tileSize * 3{
 		return true
 	}
 
