@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/rand"
 	"time"
+	"fmt"
 
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
@@ -186,6 +187,9 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		texts = []string{"", "", "", "GAME OVER"}
 		drawText(screen, texts)
 	}
+
+	scoreStr := fmt.Sprintf("%04d", g.score())
+	text.Draw(screen, scoreStr, arcadeFont, screenWidth-len(scoreStr)*fontSize, fontSize, color.White)
 }
 
 func (g *Game) pipeAt(tileX int) (tileY int, ok bool) {
@@ -199,6 +203,13 @@ func (g *Game) pipeAt(tileX int) (tileY int, ok bool) {
 	return g.pipeTileYs[idx%len(g.pipeTileYs)], true
 }
 
+func (g *Game) score() int {
+	x := floorDiv(g.gorillaX, 16) / tileSize
+	if (x - pipeStartOffsetX) <= 0 {
+		return 0
+	}
+	return floorDiv(x-pipeStartOffsetX, pipeIntervalX)
+}
 
 func (g *Game) hit() bool{	
 	const (
