@@ -6,8 +6,9 @@ import (
 )
 
 const (
-	POPULATION = 1
-	NUMBER_GENES = 100
+	POPULATION = 100
+	NUMBER_GENES = 300
+	ACTION_SPAN = 10
 )
 
 const (
@@ -45,9 +46,29 @@ func (player *CpuPlayer) NextStep() {
 	}
 }
 
+func (player *CpuPlayer) Dead() {
+	player.death = true
+}
+
+func (player *CpuPlayer) CheckDead() bool{
+	return player.death
+
+}
+
+
 type GA struct{
 	CpuPlayers [] *CpuPlayer
 	population int
+}
+
+func (ga *GA) CheckAllDead() bool {
+	for _, player := range ga.CpuPlayers{
+		if !player.death{
+			return false
+		}
+	}
+
+	return true
 }
 
 func NewGA() *GA{
