@@ -35,7 +35,7 @@ const (
 
 var (
 	arcadeFont     font.Face
-	gorillaImage   *ebiten.Image
+	gorillaImages   [] *ebiten.Image
 	tilesImage     *ebiten.Image
 )
 
@@ -45,7 +45,8 @@ func init(){
 	if err != nil {
 		log.Fatal(err)
 	}
-	gorillaImage = ebiten.NewImageFromImage(img)
+
+	gorillaImages = []*ebiten.Image{ ebiten.NewImageFromImage(img) }
 
 	file, _ = os.Open("image/tiles.png")
 	img, _, err = image.Decode(file)
@@ -82,9 +83,9 @@ const (
 type Game struct{
 	mode Mode
 
-	gorillaX int
-	gorillaY int
-	gorillaVy int
+	gorillaX []int
+	gorillaY []int
+	gorillaVy []int
 
 	cameraX int
 	cameraY int
@@ -103,8 +104,14 @@ func NewGame() *Game {
 }
 
 func (g *Game) init() {
-	g.gorillaX = 0
-	g.gorillaY = 100 * 16
+	g.gorillaX = make([]int, 1)
+	g.gorillaX[0] = 0
+
+	g.gorillaY = make([]int, 1)
+	g.gorillaY[0] = 100 * 16
+
+	g.gorillaVy = make([]int, 1)
+
 	g.cameraX = -240
 	g.cameraY = 0
 	g.pipeTileYs = make([]int, 256)
@@ -131,7 +138,7 @@ func (g *Game) Update() error {
 	case ModeTitle:
 		if clickMouseButton(){ g.mode = ModeGame }
 	case ModeGame:
-		g.gorillaX += 32
+		g.gorillaX[0] += 32
 		g.cameraX += 2
 
 		// 40回目のUpdateでAIが行動する
@@ -141,18 +148,18 @@ func (g *Game) Update() error {
 
 			for _, player := range g.GA.CpuPlayers{
 				if player.ShouldJump() {
-					g.gorillaVy = -96
+					g.gorillaVy[0] = -96
 				}
 
 				player.NextStep()
 			}
 		}
 
-		g.gorillaY += g.gorillaVy
+		g.gorillaY[0] += g.gorillaVy[0]
 
-		g.gorillaVy += 4
-		if g.gorillaVy > 96 {
-			g.gorillaVy = 96
+		g.gorillaVy[0] += 4
+		if g.gorillaVy[0] > 96 {
+			g.gorillaVy[0] = 96
 		}
 
 		if g.hit(){
@@ -213,7 +220,7 @@ func (g *Game) pipeAt(tileX int) (tileY int, ok bool) {
 }
 
 func (g *Game) score() int {
-	x := utils.FloorDiv(g.gorillaX, 16) / tileSize
+	x := utils.FloorDiv(g.gorillaX[0], 16) / tileSize
 	if (x - pipeStartOffsetX) <= 0 {
 		return 0
 	}
@@ -226,9 +233,9 @@ func (g *Game) hit() bool{
 		gorillaHeight = 65
 	)
 	
-	w, h := gorillaImage.Size()
+	w, h := gorillaImages[0].Size()
 
-	y0 := utils.FloorDiv(g.gorillaY, 16) + (h - gorillaHeight) / 2
+	y0 := utils.FloorDiv(g.gorillaY[0], 16) + (h - gorillaHeight) / 2
 	y1 := y0 + gorillaHeight
 
 	if y0 < -tileSize * 3{
@@ -239,7 +246,7 @@ func (g *Game) hit() bool{
 		return true
 	}
 
-	x0 := utils.FloorDiv(g.gorillaX, 16) + (w-gorillaWidth)/2
+	x0 := utils.FloorDiv(g.gorillaX[0], 16) + (w-gorillaWidth)/2
 	x1 := x0 + gorillaWidth
 
 	xMin := utils.FloorDiv(x0-pipeWidth, tileSize)
@@ -272,13 +279,14 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (int, int) {
 
 func (g *Game) drawGorilla(screen *ebiten.Image) {
 	op := &ebiten.DrawImageOptions{}
-	w, h := gorillaImage.Size()
+	// gorilla Image size
+	w, h := 75, 75
 	op.GeoM.Translate(-float64(w)/2.0, -float64(h)/2.0)
-	op.GeoM.Rotate(float64(g.gorillaVy) / 96.0 * math.Pi / 6)
+	op.GeoM.Rotate(float64(g.gorillaVy[0]) / 96.0 * math.Pi / 6)
 	op.GeoM.Translate(float64(w)/2.0, float64(h)/2.0)
-	op.GeoM.Translate(float64(g.gorillaX/16.0)-float64(g.cameraX), float64(g.gorillaY/16.0)-float64(g.cameraY))
+	op.GeoM.Translate(float64(g.gorillaX[0]/16.0)-float64(g.cameraX), float64(g.gorillaY[0]/16.0)-float64(g.cameraY))
 	op.Filter = ebiten.FilterLinear
-	screen.DrawImage(gorillaImage, op)
+	screen.DrawImage(gorillaImages[0], op)
 }
 
 func (g *Game) drawTiles(screen *ebiten.Image) {
