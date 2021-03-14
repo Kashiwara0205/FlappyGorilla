@@ -2,6 +2,7 @@ package main
 
 import (
 	"flappyGorilla/utils"
+	"flappyGorilla/ga"
 
 	"image"
 	_ "image/png"
@@ -92,36 +93,7 @@ type Game struct{
 
 	updateCount int
 
-	ga *GA
-}
-
-const POPULATION = 1
-const NUMBER_GENES = 100
-
-type CpuPlayer struct {
-	gene []int
-	score int
-	death bool
-	idx int
-}
-
-func (player *CpuPlayer) shouldJump() bool {
-	return true
-}
-
-func (player *CpuPlayer) nextStep() {
-	if !player.death{
-		player.idx++
-
-		if 100 == player.idx{
-			player.idx = 0
-		}
-	}
-}
-
-type GA struct{
-	cpuPlayers [] CpuPlayer
-	population int
+	GA *ga.GA
 }
 
 func NewGame() *Game {
@@ -144,33 +116,10 @@ func (g *Game) init() {
 	}
 
 	// 遺伝子の初期化
-	g.ga = NewGA()
+	g.GA = ga.NewGA()
 
 	// 描画回数を記録する(評価タイミングに使用)
 	g.updateCount = 0
-}
-
-func NewGA() *GA{
-	ga := &GA{}
-	ga.init()
-
-	return ga
-}
-
-func (g *GA) init() {
-	cnt := 0
-	cpuPlayers := [] CpuPlayer{}
-
-	gene := [] int{1}
-	for cnt < POPULATION {
-		player := CpuPlayer{ gene: gene, score: 0, death: false, idx: 0 }
-		cpuPlayers = append(cpuPlayers, player)
-
-		cnt++
-	}
-
-	g.population = POPULATION
-	g.cpuPlayers = cpuPlayers
 }
 
 func clickMouseButton() bool {
@@ -190,12 +139,12 @@ func (g *Game) Update() error {
 		if 40 == g.updateCount {
 			g.updateCount = 0
 
-			for _, player := range g.ga.cpuPlayers{
-				if player.shouldJump() {
+			for _, player := range g.GA.CpuPlayers{
+				if player.ShouldJump() {
 					g.gorillaVy = -96
 				}
 
-				player.nextStep()
+				player.NextStep()
 			}
 		}
 
