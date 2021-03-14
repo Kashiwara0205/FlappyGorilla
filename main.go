@@ -291,13 +291,12 @@ func (g *Game) drawTiles(screen *ebiten.Image) {
 
 	op := &ebiten.DrawImageOptions{}
 	for i := -2; i < nx+1; i++ {
-		// ground
+
 		op.GeoM.Reset()
 		op.GeoM.Translate(float64(i*tileSize-utils.FloorMod(g.cameraX, tileSize)),
 			float64((ny-1)*tileSize-utils.FloorMod(g.cameraY, tileSize)))
 		screen.DrawImage(tilesImage.SubImage(image.Rect(0, 0, tileSize, tileSize)).(*ebiten.Image), op)
 
-		// pipe
 		if tileY, ok := g.pipeAt(utils.FloorDiv(g.cameraX, tileSize) + i); ok {
 			for j := 0; j < tileY; j++ {
 				op.GeoM.Reset()

@@ -1,7 +1,23 @@
 package ga
 
-const POPULATION = 1
-const NUMBER_GENES = 100
+import (
+	"math/rand"
+	"time"
+)
+
+const (
+	POPULATION = 1
+	NUMBER_GENES = 100
+)
+
+const (
+	NONE = iota
+	JUMP
+)
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 type CpuPlayer struct {
 	gene []int
@@ -11,13 +27,15 @@ type CpuPlayer struct {
 }
 
 func (player *CpuPlayer) ShouldJump() bool {
-	return true
+	return JUMP == player.gene[player.idx]
 }
 
 func (player *CpuPlayer) NextStep() {
+
 	if !player.death{
-		player.stepCnt++
-		player.idx++
+	
+		player.stepCnt += 1
+		player.idx += 1
 
 		if 100 == player.idx{
 			player.idx = 0
@@ -26,7 +44,7 @@ func (player *CpuPlayer) NextStep() {
 }
 
 type GA struct{
-	CpuPlayers [] CpuPlayer
+	CpuPlayers [] *CpuPlayer
 	population int
 }
 
@@ -37,13 +55,24 @@ func NewGA() *GA{
 	return ga
 }
 
+func createInitalGenes(number int) []int{
+	cnt:= 0
+	gene := make([]int, 0)
+
+	for cnt < number{
+		gene = append(gene, rand.Intn(2))
+		cnt++
+	}
+
+	return gene
+}
+
 func (g *GA) init() {
 	cnt := 0
-	cpuPlayers := [] CpuPlayer{}
+	cpuPlayers := [] *CpuPlayer{}
 
-	gene := [] int{1}
 	for cnt < POPULATION {
-		player := CpuPlayer{ gene: gene, stepCnt: 0, death: false, idx: 0 }
+		player := &CpuPlayer{ gene: createInitalGenes(NUMBER_GENES), stepCnt: 0, death: false, idx: 0 }
 		cpuPlayers = append(cpuPlayers, player)
 
 		cnt++
