@@ -98,6 +98,39 @@ type Game struct{
 	cameraY int
 
 	pipeTileYs []int
+
+	updateCount int
+
+	ga *GA
+}
+
+const POPULATION = 1
+const NUMBER_GENES = 100
+
+type CpuPlayer struct {
+	gene []int
+	score int
+	death bool
+	idx int
+}
+
+func (player *CpuPlayer) shouldJump() bool {
+	return true
+}
+
+func (player *CpuPlayer) nextStep() {
+	if !player.death{
+		player.idx++
+
+		if 100 == player.idx{
+			player.idx = 0
+		}
+	}
+}
+
+type GA struct{
+	cpuPlayers [] CpuPlayer
+	population int
 }
 
 func getRotateValue(values []int, i int) int{
@@ -121,10 +154,40 @@ func (g *Game) init() {
 	g.cameraY = 0
 	g.pipeTileYs = make([]int, 256)
 
+	// 土管の位置
 	values := []int{2, 3, 4, 3, 5, 7, 2, 3, 4, 5}
 	for i := range g.pipeTileYs {
 		g.pipeTileYs[i] = getRotateValue(values, i)
 	}
+
+	// 遺伝子の初期化
+	g.ga = NewGA()
+
+	// 描画回数を記録する(評価タイミングに使用)
+	g.updateCount = 0
+}
+
+func NewGA() *GA{
+	ga := &GA{}
+	ga.init()
+
+	return ga
+}
+
+func (g *GA) init() {
+	cnt := 0
+	cpuPlayers := [] CpuPlayer{}
+
+	gene := [] int{1}
+	for cnt < POPULATION {
+		player := CpuPlayer{ gene: gene, score: 0, death: false, idx: 0 }
+		cpuPlayers = append(cpuPlayers, player)
+
+		cnt++
+	}
+
+	g.population = POPULATION
+	g.cpuPlayers = cpuPlayers
 }
 
 func clickMouseButton() bool {
@@ -138,9 +201,21 @@ func (g *Game) Update() error {
 	case ModeGame:
 		g.gorillaX += 32
 		g.cameraX += 2
-		if clickMouseButton(){
-			g.gorillaVy = -96
+
+		// 40回目のUpdateでAIが行動する
+		g.updateCount += 1
+		if 40 == g.updateCount {
+			g.updateCount = 0
+
+			for _, player := range g.ga.cpuPlayers{
+				if player.shouldJump() {
+					g.gorillaVy = -96
+				}
+
+				player.nextStep()
+			}
 		}
+
 		g.gorillaY += g.gorillaVy
 
 		g.gorillaVy += 4
@@ -324,7 +399,7 @@ func (g *Game) drawTiles(screen *ebiten.Image) {
 
 func main() {
     ebiten.SetWindowSize(screenWidth, screenHeight)
-    ebiten.SetWindowTitle("FlappyGORILLA")
+	ebiten.SetWindowTitle("FlappyGORILLA")
     if err := ebiten.RunGame(NewGame()); err != nil {
         log.Fatal(err)
     }
