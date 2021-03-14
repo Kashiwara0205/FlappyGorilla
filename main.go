@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flappyGorilla/utils"
+
 	"image"
 	_ "image/png"
 	"image/color"
@@ -68,17 +70,6 @@ func init() {
 	}
 }
 
-func floorDiv(x, y int) int {
-	d := x / y
-	if d*y == x || x >= 0 {
-		return d
-	}
-	return d - 1
-}
-
-func floorMod(x, y int) int {
-	return x - floorDiv(x, y)*y
-}
 type Mode int
 
 const (
@@ -133,14 +124,6 @@ type GA struct{
 	population int
 }
 
-func getRotateValue(values []int, i int) int{
-	length := len(values)
-	x := (length + i) / length
-	idx := length + i - length * x 
-
-	return values[idx]
-}
-
 func NewGame() *Game {
 	g := &Game{}
 	g.init()
@@ -157,7 +140,7 @@ func (g *Game) init() {
 	// 土管の位置
 	values := []int{2, 3, 4, 3, 5, 7, 2, 3, 4, 5}
 	for i := range g.pipeTileYs {
-		g.pipeTileYs[i] = getRotateValue(values, i)
+		g.pipeTileYs[i] = utils.GetRotateValue(values, i)
 	}
 
 	// 遺伝子の初期化
@@ -273,19 +256,19 @@ func (g *Game) pipeAt(tileX int) (tileY int, ok bool) {
 	if (tileX - pipeStartOffsetX) <= 0 {
 		return 0, false
 	}
-	if floorMod(tileX-pipeStartOffsetX, pipeIntervalX) != 0 {
+	if utils.FloorMod(tileX-pipeStartOffsetX, pipeIntervalX) != 0 {
 		return 0, false
 	}
-	idx := floorDiv(tileX-pipeStartOffsetX, pipeIntervalX)
+	idx := utils.FloorDiv(tileX-pipeStartOffsetX, pipeIntervalX)
 	return g.pipeTileYs[idx%len(g.pipeTileYs)], true
 }
 
 func (g *Game) score() int {
-	x := floorDiv(g.gorillaX, 16) / tileSize
+	x := utils.FloorDiv(g.gorillaX, 16) / tileSize
 	if (x - pipeStartOffsetX) <= 0 {
 		return 0
 	}
-	return floorDiv(x-pipeStartOffsetX, pipeIntervalX)
+	return utils.FloorDiv(x-pipeStartOffsetX, pipeIntervalX)
 }
 
 func (g *Game) hit() bool{	
@@ -296,7 +279,7 @@ func (g *Game) hit() bool{
 	
 	w, h := gorillaImage.Size()
 
-	y0 := floorDiv(g.gorillaY, 16) + (h - gorillaHeight) / 2
+	y0 := utils.FloorDiv(g.gorillaY, 16) + (h - gorillaHeight) / 2
 	y1 := y0 + gorillaHeight
 
 	if y0 < -tileSize * 3{
@@ -307,11 +290,11 @@ func (g *Game) hit() bool{
 		return true
 	}
 
-	x0 := floorDiv(g.gorillaX, 16) + (w-gorillaWidth)/2
+	x0 := utils.FloorDiv(g.gorillaX, 16) + (w-gorillaWidth)/2
 	x1 := x0 + gorillaWidth
 
-	xMin := floorDiv(x0-pipeWidth, tileSize)
-	xMax := floorDiv(x0+gorillaWidth, tileSize)
+	xMin := utils.FloorDiv(x0-pipeWidth, tileSize)
+	xMax := utils.FloorDiv(x0+gorillaWidth, tileSize)
 	for x := xMin; x <= xMax; x++ {
 		y, ok := g.pipeAt(x)
 		if !ok {
@@ -361,17 +344,17 @@ func (g *Game) drawTiles(screen *ebiten.Image) {
 	for i := -2; i < nx+1; i++ {
 		// ground
 		op.GeoM.Reset()
-		op.GeoM.Translate(float64(i*tileSize-floorMod(g.cameraX, tileSize)),
-			float64((ny-1)*tileSize-floorMod(g.cameraY, tileSize)))
+		op.GeoM.Translate(float64(i*tileSize-utils.FloorMod(g.cameraX, tileSize)),
+			float64((ny-1)*tileSize-utils.FloorMod(g.cameraY, tileSize)))
 		screen.DrawImage(tilesImage.SubImage(image.Rect(0, 0, tileSize, tileSize)).(*ebiten.Image), op)
 
 		// pipe
-		if tileY, ok := g.pipeAt(floorDiv(g.cameraX, tileSize) + i); ok {
+		if tileY, ok := g.pipeAt(utils.FloorDiv(g.cameraX, tileSize) + i); ok {
 			for j := 0; j < tileY; j++ {
 				op.GeoM.Reset()
 				op.GeoM.Scale(1, -1)
-				op.GeoM.Translate(float64(i*tileSize-floorMod(g.cameraX, tileSize)),
-					float64(j*tileSize-floorMod(g.cameraY, tileSize)))
+				op.GeoM.Translate(float64(i*tileSize-utils.FloorMod(g.cameraX, tileSize)),
+					float64(j*tileSize-utils.FloorMod(g.cameraY, tileSize)))
 				op.GeoM.Translate(0, tileSize)
 				var r image.Rectangle
 				if j == tileY-1 {
@@ -383,8 +366,8 @@ func (g *Game) drawTiles(screen *ebiten.Image) {
 			}
 			for j := tileY + pipeGapY; j < screenHeight/tileSize-1; j++ {
 				op.GeoM.Reset()
-				op.GeoM.Translate(float64(i*tileSize-floorMod(g.cameraX, tileSize)),
-					float64(j*tileSize-floorMod(g.cameraY, tileSize)))
+				op.GeoM.Translate(float64(i*tileSize-utils.FloorMod(g.cameraX, tileSize)),
+					float64(j*tileSize-utils.FloorMod(g.cameraY, tileSize)))
 				var r image.Rectangle
 				if j == tileY+pipeGapY {
 					r = image.Rect(pipeTileSrcX, pipeTileSrcY, pipeTileSrcX+pipeWidth, pipeTileSrcY+tileSize)
