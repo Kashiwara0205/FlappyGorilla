@@ -21,20 +21,22 @@ func init() {
 
 type CpuPlayer struct {
 	gene []int
-	stepCnt int
+	evaluation int
 	death bool
 	idx int
 }
 
 func (player *CpuPlayer) ShouldJump() bool {
+	// 落ちたら死ぬので、とにかく飛んだら評価する
+	player.evaluation += 1
 	return JUMP == player.gene[player.idx]
 }
 
 func (player *CpuPlayer) NextStep() {
 
 	if !player.death{
-	
-		player.stepCnt += 1
+		// 長く生き残った個体は評価する
+		player.evaluation += 1
 		player.idx += 1
 
 		if 100 == player.idx{
@@ -72,7 +74,7 @@ func (g *GA) init() {
 	cpuPlayers := [] *CpuPlayer{}
 
 	for cnt < POPULATION {
-		player := &CpuPlayer{ gene: createInitalGenes(NUMBER_GENES), stepCnt: 0, death: false, idx: 0 }
+		player := &CpuPlayer{ gene: createInitalGenes(NUMBER_GENES), evaluation: 0, death: false, idx: 0 }
 		cpuPlayers = append(cpuPlayers, player)
 
 		cnt++
