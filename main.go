@@ -46,8 +46,8 @@ func init(){
 		log.Fatal(err)
 	}
 
-	gorillaImages = make([]*ebiten.Image, ga.POPULATION)
-	for i:= 0; i < ga.POPULATION; i++{
+	gorillaImages = make([]*ebiten.Image, ga.POPULATION_SIZE)
+	for i:= 0; i < ga.POPULATION_SIZE; i++{
 		gorillaImages[i] = ebiten.NewImageFromImage(img)
 	}
 
@@ -107,11 +107,11 @@ func NewGame() *Game {
 }
 
 func (g *Game) init() {
-	g.gorillaX = make([]int, ga.POPULATION)
-	g.gorillaY = make([]int, ga.POPULATION)
-	g.gorillaVy = make([]int, ga.POPULATION)
+	g.gorillaX = make([]int, ga.POPULATION_SIZE)
+	g.gorillaY = make([]int, ga.POPULATION_SIZE)
+	g.gorillaVy = make([]int, ga.POPULATION_SIZE)
 
-	for i:= 0; i < ga.POPULATION; i++{
+	for i:= 0; i < ga.POPULATION_SIZE; i++{
 		g.gorillaX[i] = 0
 		g.gorillaY[i] = 1600
 	}
@@ -127,7 +127,11 @@ func (g *Game) init() {
 	}
 
 	// 遺伝子の初期化
-	g.GA = ga.NewGA()
+	if g.GA == nil{
+		g.GA = ga.NewGA()
+	}else{
+		fmt.Printf("=> [UPDATE GA]\n")
+	}
 
 	// 描画回数を記録する(評価タイミングに使用)
 	g.updateCount = 0
@@ -140,11 +144,11 @@ func clickMouseButton() bool {
 func (g *Game) Update() error {
 	switch g.mode{
 	case ModeTitle:
-		if clickMouseButton(){ g.mode = ModeGame }
+		g.mode = ModeGame
 	case ModeGame:
 		g.cameraX += 2
 
-		for i:= 0; i < ga.POPULATION; i++{
+		for i:= 0; i < ga.POPULATION_SIZE; i++{
 			g.gorillaX[i] += 32
 		}
 
@@ -152,17 +156,17 @@ func (g *Game) Update() error {
 		if ga.ACTION_SPAN == g.updateCount {
 			g.updateCount = 0
 
-			for i, player := range g.GA.CpuPlayers{
-				if player.ShouldJump() {
+			for i, individual := range g.GA.Individuals{
+				if individual.ShouldJump() {
 					g.gorillaVy[i] = -96
 				}
 
-				player.NextStep()
+				individual.NextStep()
 			}
 		}
 
 		// 各、ゴリラの重力計算
-		for i:= 0; i < ga.POPULATION; i++{
+		for i:= 0; i < ga.POPULATION_SIZE; i++{
 			g.gorillaY[i] += g.gorillaVy[i]
 
 			g.gorillaVy[i] += 4
@@ -172,22 +176,23 @@ func (g *Game) Update() error {
 		}
 
 		// 各、ゴリラの当たり判定
-		for i, player := range g.GA.CpuPlayers{
-			if g.hit(i) {
-				player.Dead()
+		for i, individual := range g.GA.Individuals{
+			if !individual.CheckDead() && g.hit(i) {
+				individual.Dead()
 			}
 		}
 
 		// 全部のゴリラが死んだか判定
 		if g.GA.CheckAllDead(){
+			// 遺伝子の更新
+			g.GA.Update()
 			g.mode = ModeGameOver 
+			
 		}
 
 	case ModeGameOver:
-		if clickMouseButton(){ 
-			g.init()
-			g.mode = ModeTitle 
-		}
+		g.init()
+		g.mode = ModeGame
 	}
 
     return nil
@@ -215,7 +220,6 @@ func (g *Game) Draw(screen *ebiten.Image) {
 		g.drawGorilla(screen)
 		ebitenutil.DebugPrint(screen, "ModeGame")
 	case ModeGameOver:
-		g.drawGorilla(screen)
 		ebitenutil.DebugPrint(screen, "ModeGameOver")
 		texts = []string{"", "", "", "GAME OVER"}
 		drawText(screen, texts)
@@ -229,15 +233,17 @@ func (g *Game) pipeAt(tileX int) (tileY int, ok bool) {
 	if (tileX - pipeStartOffsetX) <= 0 {
 		return 0, false
 	}
+
 	if utils.FloorMod(tileX-pipeStartOffsetX, pipeIntervalX) != 0 {
 		return 0, false
 	}
+
 	idx := utils.FloorDiv(tileX-pipeStartOffsetX, pipeIntervalX)
 	return g.pipeTileYs[idx%len(g.pipeTileYs)], true
 }
 
 func (g *Game) score() int {
-	return 1
+	return 0
 }
 
 func (g *Game) hit(idx int) bool{	
@@ -251,11 +257,21 @@ func (g *Game) hit(idx int) bool{
 	y0 := utils.FloorDiv(g.gorillaY[idx], 16) + (h - gorillaHeight) / 2
 	y1 := y0 + gorillaHeight
 
+	if y0 >= tileSize * 2{
+		g.GA.Individuals[idx].Score += 1
+	}
+
 	if y0 < -tileSize * 3{
+		g.GA.Individuals[idx].Score -= 300
 		return true
 	}
 
+	if y1 < screenHeight - tileSize * 2 {
+		g.GA.Individuals[idx].Score += 1
+	}
+
 	if y1 >= screenHeight-tileSize {
+		g.GA.Individuals[idx].Score -= 300
 		return true
 	}
 
@@ -264,25 +280,64 @@ func (g *Game) hit(idx int) bool{
 
 	xMin := utils.FloorDiv(x0-pipeWidth, tileSize)
 	xMax := utils.FloorDiv(x0+gorillaWidth, tileSize)
+
+	passedPoint := 0
+
 	for x := xMin; x <= xMax; x++ {
-		y, ok := g.pipeAt(x)	
+		y, ok := g.pipeAt(x)
+
 		if !ok {
 			continue	
 		}
+
+		topBoaderLine := y * tileSize
+		underBoaderLine := (y+pipeGapY)*tileSize
+
 		if x0 >= x*tileSize+pipeWidth {
 			continue
 		}
 		if x1 < x*tileSize {	
 			continue	
 		}
-		if y0 < y*tileSize {
+
+		if y0 < topBoaderLine {
+			diff := topBoaderLine - y0
+			if 5 > diff{
+				g.GA.Individuals[idx].Score -= 50
+			}else if 10 > diff{
+				g.GA.Individuals[idx].Score -= 100
+			}else if 15 > diff{
+				g.GA.Individuals[idx].Score -= 150
+			}else if 20 > diff{
+				g.GA.Individuals[idx].Score -= 200
+			}else{
+				g.GA.Individuals[idx].Score -= 300
+			}
 			return true
 		}
-		if y1 >= (y+pipeGapY)*tileSize {	
+
+		if y1 >= underBoaderLine {
+			diff := y1 - underBoaderLine
+			if 5 > diff{
+				g.GA.Individuals[idx].Score -= 50
+			}else if 10 > diff{
+				g.GA.Individuals[idx].Score -= 100
+			}else if 15 > diff{
+				g.GA.Individuals[idx].Score -= 150
+			}else if 20 > diff{
+				g.GA.Individuals[idx].Score -= 200
+			}else{
+				g.GA.Individuals[idx].Score -= 300
+			}
 			return true
 		}
+
+		passedPoint = 10
 	}
-	
+
+	g.GA.Individuals[idx].Score += passedPoint
+	g.GA.Individuals[idx].Score += 1
+
 	return false
 }
 
@@ -294,9 +349,9 @@ func (g *Game) drawGorilla(screen *ebiten.Image) {
 	// gorilla Image size
 	w, h := 75, 75
 
-	for i:= 0; i < ga.POPULATION; i++{
+	for i:= 0; i < ga.POPULATION_SIZE; i++{
 		// 死んだゴリラは描画しない
-		if g.GA.CpuPlayers[i].CheckDead(){
+		if g.GA.Individuals[i].CheckDead(){
 			continue
 		}
 		op := &ebiten.DrawImageOptions{}
@@ -358,7 +413,7 @@ func (g *Game) drawTiles(screen *ebiten.Image) {
 
 func main() {
     ebiten.SetWindowSize(screenWidth, screenHeight)
-	ebiten.SetWindowTitle("FlappyGORILLA")
+	ebiten.SetWindowTitle("Flappy Gorilla")
     if err := ebiten.RunGame(NewGame()); err != nil {
         log.Fatal(err)
     }

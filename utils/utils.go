@@ -12,10 +12,13 @@ func FloorMod(x, y int) int {
 	return x - FloorDiv(x, y)*y
 }
 
-func GetRotateValue(values []int, i int) int{
-	length := len(values)
-	x := (length + i) / length
-	idx := length + i - length * x 
+func GetRotateIndex(size int, i int) int{
+	x := (size + i) / size
+	idx := size + i - size * x 
 
-	return values[idx]
+	return idx
+}
+
+func GetRotateValue(values []int, i int) int{
+	return values[GetRotateIndex(len(values), i)]
 }
