@@ -1,9 +1,13 @@
 # FlappyGorilla
-![2021-03-14 17 03 33 のスクリーンショット](https://user-images.githubusercontent.com/34295276/111061581-74fd4800-84e7-11eb-8c44-3b611123d7e3.png)
 
-Game for experimenting with genetic algorithms
+![Videotogif](https://user-images.githubusercontent.com/34295276/112307834-c5915400-8ce4-11eb-983a-8061a976faeb.gif)
 
-Source: 
+
+遺伝的アルゴリズムの実装用に作成したゲーム  
+ゴリラが勝手に土管を突破していきます
+
+
+## Source
 https://github.com/hajimehoshi/ebiten/tree/master/examples/flappy  
 https://www.irasutoya.com/  
 https://opengameart.org/content/super-mario-world-style-tiles
