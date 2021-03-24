@@ -130,7 +130,7 @@ func (g *Game) init() {
 	if g.GA == nil{
 		g.GA = ga.NewGA()
 	}else{
-		fmt.Printf("=> [UPDATE GA]\n")
+		fmt.Printf("=> UPDATE GA\n")
 	}
 
 	// 描画回数を記録する(評価タイミングに使用)

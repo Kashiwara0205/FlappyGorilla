@@ -167,7 +167,7 @@ func (ga *GA) Update() {
 		newIndividuals = appendNewIndividual(newIndividuals, individualA, individualB)
 	}
 
-	fmt.Printf("=> GORIRA SIZE%v\n", len(newIndividuals))
+	fmt.Printf("=> GORIRA SIZE:%v\n", len(newIndividuals))
 	ga.Individuals = newIndividuals[0:POPULATION_SIZE]
 }
 
